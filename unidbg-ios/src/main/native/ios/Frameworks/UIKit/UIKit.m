@@ -72,6 +72,8 @@ int UIApplicationMain(int argc, char *argv[], NSString *principalClassName, NSSt
     [carrier setCarrierName: [_carrierName retain]];
   }
 
+  NSUserDefaults *userDefault = [NSUserDefaults standardUserDefaults];
+  [userDefault setBool: YES forKey: @"NSFileCoordinatorDoesNothing"];
   NSNumber *callFinishLaunchingWithOptions = dict[@"callFinishLaunchingWithOptions"];
   if(delegate && [callFinishLaunchingWithOptions boolValue]) {
     UIApplication *application;
@@ -305,6 +307,7 @@ static UIApplication *sharedApplication;
 }
 
 - (void)registerForRemoteNotifications {
+    NSLog(@"registerForRemoteNotifications delegate=%@", delegate);
 }
 
 - (BOOL)sendAction:(SEL)action to:(id)target from:(id)sender forEvent:(UIEvent *)event {
@@ -449,6 +452,11 @@ static UIApplication *sharedApplication;
 
 @implementation NSDateFormatter (Foundation)
 - (void)setLocalizedDateFormatFromTemplate:(NSString *)dateFormatTemplate {
+}
+@end
+@implementation NSKeyedArchiver (Foundation)
+- (id)initRequiringSecureCoding:(BOOL)requiresSecureCoding {
+    return nil;
 }
 @end
 #pragma clang diagnostic pop

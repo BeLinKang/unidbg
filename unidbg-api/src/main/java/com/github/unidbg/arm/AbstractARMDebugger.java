@@ -452,7 +452,7 @@ public abstract class AbstractARMDebugger implements Debugger {
     private PrintStream traceWriteRedirectStream;
 
     final boolean handleCommon(Backend backend, String line, long address, int size, long nextAddress, DebugRunnable<?> runnable) throws Exception {
-        if ("exit".equals(line) || "quit".equals(line)) { // continue
+        if ("exit".equals(line) || "quit".equals(line) || "q".equals(line)) { // continue
             return true;
         }
         if ("gc".equals(line)) {
@@ -836,7 +836,7 @@ public abstract class AbstractARMDebugger implements Debugger {
                 KeystoneEncoded encoded = keystone.assemble(assembly);
                 byte[] code = encoded.getMachineCode();
                 address &= (~1);
-                if (code.length != nextAddress - address) {
+                if (code.length != (nextAddress & ~1) - address) {
                     System.err.println("patch code failed: nextAddress=0x" + Long.toHexString(nextAddress) + ", codeSize=" + code.length);
                     return false;
                 }
