@@ -7,6 +7,7 @@ import com.github.unidbg.Module;
 import com.github.unidbg.arm.backend.DynarmicFactory;
 import com.github.unidbg.arm.backend.HypervisorFactory;
 import com.github.unidbg.arm.backend.KvmFactory;
+import com.github.unidbg.arm.backend.Unicorn2Factory;
 import com.github.unidbg.arm.backend.hypervisor.HypervisorBackend64;
 import com.github.unidbg.linux.android.AndroidEmulatorBuilder;
 import com.github.unidbg.linux.android.AndroidResolver;
@@ -26,6 +27,9 @@ import org.apache.log4j.Logger;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * mvn test -Dmaven.test.skip=false -Dtest=org.telegram.messenger.Utilities64
+ */
 public class Utilities64 extends TestCase {
 
     private static LibraryResolver createLibraryResolver() {
@@ -39,6 +43,7 @@ public class Utilities64 extends TestCase {
                 .addBackendFactory(new HypervisorFactory(true))
                 .addBackendFactory(new DynarmicFactory(true))
                 .addBackendFactory(new KvmFactory(true))
+                .addBackendFactory(new Unicorn2Factory(true))
                 .build();
     }
 
@@ -58,6 +63,7 @@ public class Utilities64 extends TestCase {
         assert module != null;
         new AndroidModule(emulator, vm).register(memory);
 
+        System.out.println("backend=" + emulator.getBackend());
         vm.setVerbose(true);
         File file = new File("src/test/resources/example_binaries/arm64-v8a/libtmessages.29.so");
         DalvikModule dm = vm.loadLibrary(file.canRead() ? file : new File("unidbg-android/src/test/resources/example_binaries/arm64-v8a/libtmessages.29.so"), true);
@@ -133,7 +139,7 @@ public class Utilities64 extends TestCase {
             cUtilities.callStaticJniMethod(emulator, "pbkdf2([B[B[BI)V", password,
                     salt,
                     dst, 100000);
-            Inspector.inspect(dst.getValue(), "[" + Thread.currentThread().getName() + "]pbkdf2 offset=" + (System.currentTimeMillis() - start) + "ms");
+            Inspector.inspect(dst.getValue(), String.format("[%s]pbkdf2 offset=%sms, backend=%s", Thread.currentThread().getName(), System.currentTimeMillis() - start, emulator.getBackend()));
         }
     }
 
