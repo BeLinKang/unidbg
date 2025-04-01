@@ -4,15 +4,15 @@ import com.github.unidbg.Emulator;
 import com.github.unidbg.PointerNumber;
 import com.github.unidbg.pointer.UnidbgPointer;
 import com.github.unidbg.spi.InitFunction;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
 class MachOModuleInit extends InitFunction {
 
-    private static final Log log = LogFactory.getLog(MachOModuleInit.class);
+    private static final Logger log = LoggerFactory.getLogger(MachOModuleInit.class);
 
     private final UnidbgPointer envp;
     private final UnidbgPointer apple;
@@ -36,14 +36,11 @@ class MachOModuleInit extends InitFunction {
      * initializer(int argc, const char* argv[], const char* envp[], const char* apple[], const struct ProgramVars* vars)
      */
     public long call(Emulator<?> emulator) {
-//        emulator.traceCode();
         if (isModInit) {
-            log.debug("[" + libName + "]CallInitFunction: 0x" + Long.toHexString(address));
+            log.debug("[{}]CallInitFunction: 0x{}", libName, Long.toHexString(address));
         } else {
-            log.debug("[" + libName + "]CallRoutineFunction: 0x" + Long.toHexString(address));
+            log.debug("[{}]CallRoutineFunction: 0x{}", libName, Long.toHexString(address));
         }
-//            emulator.attach().addBreakPoint(null, 0x401d6be6);
-//            emulator.attach().addBreakPoint(null, 0x402fb538);
         long start = System.currentTimeMillis();
         callModInit(emulator, load_base + address, 0, null, envp, apple, vars);
         if (log.isDebugEnabled()) {
@@ -57,7 +54,7 @@ class MachOModuleInit extends InitFunction {
     }
 
     // (int argc, const char* argv[], const char* envp[], const char* apple[], const struct ProgramVars* vars)
-    private static void callModInit(Emulator<?> emulator, long address, int argc, UnidbgPointer argv, UnidbgPointer envp, UnidbgPointer apple, UnidbgPointer vars) {
+    static void callModInit(Emulator<?> emulator, long address, int argc, UnidbgPointer argv, UnidbgPointer envp, UnidbgPointer apple, UnidbgPointer vars) {
         List<Number> list = new ArrayList<>(5);
         list.add(argc);
         list.add(argv == null ? null : new PointerNumber(UnidbgPointer.pointer(emulator, argv.peer)));

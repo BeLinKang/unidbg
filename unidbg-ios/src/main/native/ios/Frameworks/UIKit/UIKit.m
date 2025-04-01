@@ -453,6 +453,11 @@ static UIApplication *sharedApplication;
 }
 @end
 
+@implementation NSOperation (Foundation)
+- (void) setQualityOfService: (NSQualityOfService) qualityOfService {
+}
+@end
+
 @implementation NSDateFormatter (Foundation)
 - (void)setLocalizedDateFormatFromTemplate:(NSString *)dateFormatTemplate {
 }
@@ -668,6 +673,13 @@ BOOL UIAccessibilityDarkerSystemColorsEnabled() {
 - (float)floatValue {
   [self doesNotRecognizeSelector:_cmd];
   return 0.0;
+}
+@end
+
+@implementation LAContext
+- (BOOL) canEvaluatePolicy:(LAPolicy) policy
+                     error:(NSError * *) error {
+  return TRUE;
 }
 @end
 

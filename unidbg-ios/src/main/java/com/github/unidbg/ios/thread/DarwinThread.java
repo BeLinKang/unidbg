@@ -7,14 +7,10 @@ import com.github.unidbg.ios.struct.kernel.Pthread;
 import com.github.unidbg.pointer.UnidbgPointer;
 import com.github.unidbg.thread.ThreadTask;
 import com.sun.jna.Pointer;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import unicorn.Arm64Const;
 import unicorn.ArmConst;
 
 public class DarwinThread extends ThreadTask {
-
-    private static final Log log = LogFactory.getLog(DarwinThread.class);
 
     private final UnidbgPointer start_routine;
     private final UnidbgPointer arg;
@@ -55,7 +51,7 @@ public class DarwinThread extends ThreadTask {
         Backend backend = emulator.getBackend();
 
         UnidbgPointer stack = allocateStack(emulator);
-        pthread.setStack(stack, THREAD_STACK_SIZE);
+        pthread.setStack(stack, (long) THREAD_STACK_PAGE * emulator.getPageAlign());
         pthread.pack();
 
         backend.reg_write(emulator.is32Bit() ? ArmConst.UC_ARM_REG_R0 : Arm64Const.UC_ARM64_REG_X0, this.arg == null ? 0L : this.arg.peer);

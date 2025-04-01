@@ -2,12 +2,6 @@ package com.github.unidbg.ios;
 
 import com.github.unidbg.Emulator;
 import com.github.unidbg.Module;
-import com.github.unidbg.ios.struct.LoadCommand;
-import com.github.unidbg.ios.struct.MachHeader;
-import com.github.unidbg.ios.struct.MachHeader64;
-import com.github.unidbg.ios.struct.SegmentCommand;
-import com.github.unidbg.ios.struct.SegmentCommand32;
-import com.github.unidbg.ios.struct.SegmentCommand64;
 import com.github.unidbg.ios.struct.sysctl.DyldImageInfo32;
 import com.github.unidbg.ios.struct.sysctl.DyldImageInfo64;
 import com.github.unidbg.memory.SvcMemory;
@@ -15,16 +9,15 @@ import com.github.unidbg.pointer.UnidbgPointer;
 import com.github.unidbg.pointer.UnidbgStructure;
 import com.github.unidbg.spi.Dlfcn;
 import com.sun.jna.Pointer;
-import io.kaitai.MachO;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public abstract class Dyld extends Dlfcn {
 
-    private static final Log log = LogFactory.getLog(Dyld.class);
+    private static final Logger log = LoggerFactory.getLogger(Dyld.class);
 
     static final int dyld_image_state_bound = 40;
     static final int dyld_image_state_dependents_initialized = 45; // Only single notification for this
@@ -45,34 +38,11 @@ public abstract class Dyld extends Dlfcn {
 
     abstract int _stub_binding_helper();
 
-    public static long computeSlide(Emulator<?> emulator, long machHeader) {
-        Pointer pointer = UnidbgPointer.pointer(emulator, machHeader);
-        assert pointer != null;
-        MachHeader header = emulator.is32Bit() ? new MachHeader(pointer) : new MachHeader64(pointer);
-        header.unpack();
-        Pointer loadPointer = pointer.share(header.size());
-        for (int i = 0; i < header.ncmds; i++) {
-            LoadCommand loadCommand = new LoadCommand(loadPointer);
-            loadCommand.unpack();
-            if (loadCommand.type == io.kaitai.MachO.LoadCommandType.SEGMENT.id() ||
-                    loadCommand.type == MachO.LoadCommandType.SEGMENT_64.id()) {
-                SegmentCommand segmentCommand = emulator.is64Bit() ? new SegmentCommand64(loadPointer) : new SegmentCommand32(loadPointer);
-                segmentCommand.unpack();
-
-                if ("__TEXT".equals(segmentCommand.getSegName())) {
-                    return (machHeader - segmentCommand.getVmAddress());
-                }
-            }
-            loadPointer = loadPointer.share(loadCommand.size);
-        }
-        return 0;
-    }
-
     abstract int _dyld_func_lookup(Emulator<?> emulator, String name, Pointer address);
 
     protected final UnidbgStructure[] registerImageStateBatchChangeHandler(MachOLoader loader, int state, UnidbgPointer handler, Emulator<?> emulator) {
         if (log.isDebugEnabled()) {
-            log.debug("registerImageStateBatchChangeHandler state=" + state + ", handler=" + handler);
+            log.debug("registerImageStateBatchChangeHandler state={}, handler={}", state, handler);
         }
 
         if (state != dyld_image_state_bound) {
@@ -100,7 +70,7 @@ public abstract class Dyld extends Dlfcn {
                 continue;
             }
             if (log.isDebugEnabled()) {
-                log.debug("generateDyldImageInfo: " + module.name);
+                log.debug("generateDyldImageInfo: {}", module.name);
             }
 
             MachOModule mm = (MachOModule) module;
@@ -133,7 +103,7 @@ public abstract class Dyld extends Dlfcn {
 
     protected final UnidbgStructure[] registerImageStateSingleChangeHandler(MachOLoader loader, int state, UnidbgPointer handler, Emulator<?> emulator) {
         if (log.isDebugEnabled()) {
-            log.debug("registerImageStateSingleChangeHandler state=" + state + ", handler=" + handler);
+            log.debug("registerImageStateSingleChangeHandler state={}, handler={}", state, handler);
         }
 
         if (state == dyld_image_state_terminated) {

@@ -8,9 +8,6 @@ Use it at your own risk !
 
 ## License
 - unidbg uses software libraries from [Apache Software Foundation](http://apache.org). 
-- unidbg developer Idea enterprise licenses are supported by [Jetbrains](https://www.jetbrains.com?from=unidbg).
-- [IntelliJ IDEA](https://www.jetbrains.com/idea?from=unidbg) can be used to edit unidbg sources.
-- ![](assets/idea_logo.svg)
 
 Simple tests under src/test directory
 - [unidbg-android/src/test/java/com/bytedance/frameworks/core/encrypt/TTEncrypt.java](https://github.com/zhkl0228/unidbg/blob/master/unidbg-android/src/test/java/com/bytedance/frameworks/core/encrypt/TTEncrypt.java)  
@@ -63,11 +60,6 @@ Simple tests under src/test directory
 - [fishhook](https://github.com/facebook/fishhook)
 - [runtime_class-dump](https://github.com/Tyilo/runtime_class-dump)
 - [mman-win32](https://github.com/mcgarrah/mman-win32)
-
-### One-time Donation
-We accept donations via WeChatPay:
-
-![WeChat Pay](assets/wx.png)
 
 ## Stargazers over time
 

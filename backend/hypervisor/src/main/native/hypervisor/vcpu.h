@@ -1,9 +1,14 @@
+#pragma once
 #include <Hypervisor/Hypervisor.h>
 
-#include <stdio.h>
+#include <cstdio>
 #include <mach-o/nlist.h>
 #include <mach-o/dyld.h>
 #include <mach-o/dyld_images.h>
+
+// Diagnostics
+#define HYP_ASSERT_SUCCESS(ret) assert((hv_return_t) (ret) == HV_SUCCESS)
+#define HV_REG_SP HV_SYS_REG_SP_EL0
 
 typedef struct vcpu_context {
   uint64_t magic;
@@ -76,7 +81,8 @@ typedef struct vcpu_context {
   hv_simd_fp_uchar16_t HV_SIMD_FP_REG_Q30;
   hv_simd_fp_uchar16_t HV_SIMD_FP_REG_Q31;
 
-  char _pad2[0x10];
+  uint64_t HV_REG_FPSR;
+  uint16_t HV_REG_FPCR;
   uint64_t HV_SYS_REG_MDSCR_EL1;
   uint64_t HV_SYS_REG_TPIDR_EL1;
   uint64_t HV_SYS_REG_TPIDR_EL0;
@@ -85,8 +91,8 @@ typedef struct vcpu_context {
   uint64_t HV_SYS_REG_SP_EL1;
   uint64_t HV_SYS_REG_PAR_EL1;
   uint64_t HV_SYS_REG_CSSELR_EL1;
-  uint64_t ext_reg;
-  uint64_t unknown0x398;
+  uint64_t ext_reg; // _hv_vcpu_get_ext_reg
+  uint64_t unknown0x398_0xF795;
   uint64_t HV_SYS_REG_TTBR0_EL1;
   uint64_t HV_SYS_REG_TTBR1_EL1;
   uint64_t HV_SYS_REG_TCR_EL1;
@@ -240,7 +246,43 @@ typedef struct vcpus_v1351 {
   char _pad2[0x28];
 } *t_vcpus_v1351;
 
-#define HCR_EL2$DC 12
+typedef struct vcpus_v1500 {
+  void *_1;
+  void *_2;
+  t_vcpu_context context;
+  uint64_t HV_SYS_REG_ID_AA64DFR0_EL1;
+  uint64_t HV_SYS_REG_ID_AA64DFR1_EL1;
+  uint64_t HV_SYS_REG_ID_AA64ISAR0_EL1;
+  uint64_t HV_SYS_REG_ID_AA64ISAR1_EL1;
+  uint64_t HV_SYS_REG_ID_AA64MMFR0_EL1;
+  uint64_t HV_SYS_REG_ID_AA64MMFR1_EL1;
+  uint64_t HV_SYS_REG_ID_AA64MMFR2_EL1;
+  uint64_t HV_SYS_REG_ID_AA64PFR0_EL1;
+  uint64_t HV_SYS_REG_ID_AA64PFR1_EL1;
+  char _pad1[0x98];
+  uint64_t unknown_13_5_1; // since 13.5.1
+  uint64_t HV_SYS_REG_HCR_EL2;
+} *t_vcpus_v1500;
+
+typedef struct vcpus_v1520 {
+  void *_1;
+  void *_2;
+  t_vcpu_context context;
+  uint64_t HV_SYS_REG_ID_AA64DFR0_EL1;
+  uint64_t HV_SYS_REG_ID_AA64DFR1_EL1;
+  uint64_t HV_SYS_REG_ID_AA64ISAR0_EL1;
+  uint64_t HV_SYS_REG_ID_AA64ISAR1_EL1;
+  uint64_t HV_SYS_REG_ID_AA64MMFR0_EL1;
+  uint64_t HV_SYS_REG_ID_AA64MMFR1_EL1;
+  uint64_t HV_SYS_REG_ID_AA64MMFR2_EL1;
+  uint64_t HV_SYS_REG_ID_AA64PFR0_EL1;
+  uint64_t HV_SYS_REG_ID_AA64PFR1_EL1;
+  char _pad1[0x98];
+  uint64_t unknown_13_5_1; // since 13.5.1
+  uint64_t unknown_15_2_0; // since 15.2
+  uint64_t unknown_15_2_1; // since 15.2
+  uint64_t HV_SYS_REG_HCR_EL2;
+} *t_vcpus_v1520;
 
 extern "C" t_vcpu_context _hv_vcpu_get_context(hv_vcpu_t vcpu);
 
@@ -248,71 +290,109 @@ extern "C" hv_return_t _hv_vcpu_get_ext_reg(hv_vcpu_t vcpu, bool error, uint64_t
 
 extern "C" hv_return_t _hv_vcpu_set_control_field(hv_vcpu_t vcpu, int index, uint64_t value);
 
-void set_HV_SYS_REG_HCR_EL2(void *vcpu, uint64_t value) {
-  if (@available(macOS 13.5.1, *)) {
-    t_vcpus_v1351 cpu = (t_vcpus_v1351) vcpu;
+typedef struct hypervisor_cpu {
+  hv_vcpu_t vcpu;
+  hv_vcpu_exit_t *vcpu_exit;
+  void *cpu;
+  uint8_t BRPs; // Number of breakpoints
+  uint8_t WRPs; // Number of watchpoints
+} *t_hypervisor_cpu;
+
+#define HCR_EL2$DC 12
+
+inline void set_HV_SYS_REG_HCR_EL2(t_hypervisor_cpu _cpu, const uint64_t value) {
+  if (@available(macOS 15.2.0, *)) {
+    const auto cpu = static_cast<t_vcpus_v1520>(_cpu->cpu);
+    cpu->HV_SYS_REG_HCR_EL2 = value;
+  } else if (@available(macOS 15.0.0, *)) { // HYP_ASSERT_SUCCESS(hv_vcpu_set_sys_reg(_cpu->vcpu, HV_SYS_REG_HCR_EL2, value));
+    const auto cpu = static_cast<t_vcpus_v1500>(_cpu->cpu);
+    cpu->HV_SYS_REG_HCR_EL2 = value;
+  } else if (@available(macOS 13.5.1, *)) {
+    const auto cpu = static_cast<t_vcpus_v1351>(_cpu->cpu);
     cpu->HV_SYS_REG_HCR_EL2 = value;
   } else {
-    t_vcpus cpu = (t_vcpus) vcpu;
+    const auto cpu = static_cast<t_vcpus>(_cpu->cpu);
     cpu->HV_SYS_REG_HCR_EL2 = value;
   }
 }
 
-static void *lookupVcpu(hv_vcpu_t vcpu) {
-  const struct mach_header *header = 0;
+static const mach_header *findHypervisorHeader(intptr_t *out_slide) {
+  const mach_header *header = nullptr;
   intptr_t slide = 0;
   for (uint32_t i = 0, count = _dyld_image_count(); i < count; i++) {
-    const char *name = _dyld_get_image_name(i);
-    if(strlen(name) > 0 && strstr(name, "/System/Library/Frameworks/Hypervisor.framework/")) {
+    if(const char *name = _dyld_get_image_name(i); strlen(name) > 0 && strstr(name, "/System/Library/Frameworks/Hypervisor.framework/")) {
       slide = _dyld_get_image_vmaddr_slide(i);
       header = _dyld_get_image_header(i);
       break;
     }
   }
-  if(header) {
-    struct segment_command_64 *cur_seg_cmd;
-    struct segment_command_64 *linkedit_segment = NULL;
-    struct symtab_command* symtab_cmd = NULL;
-    uintptr_t cur = (uintptr_t)header + sizeof(struct mach_header_64);
-    for (uint i = 0; i < header->ncmds; i++, cur += cur_seg_cmd->cmdsize) {
-      cur_seg_cmd = (struct segment_command_64 *)cur;
-      if (cur_seg_cmd->cmd == LC_SEGMENT_64) {
-        if (strcmp(cur_seg_cmd->segname, SEG_LINKEDIT) == 0) {
-          linkedit_segment = cur_seg_cmd;
-        }
-      } else if (cur_seg_cmd->cmd == LC_SYMTAB) {
-        symtab_cmd = (struct symtab_command*)cur_seg_cmd;
-      }
-    }
-    if(symtab_cmd && linkedit_segment) {
-      const uintptr_t linkedit_base = (uintptr_t)slide + linkedit_segment->vmaddr - linkedit_segment->fileoff;
-      char *strtab = (char *)(linkedit_base + symtab_cmd->stroff);
+  *out_slide = slide;
+  return header;
+}
 
-      struct nlist_64 *symtab = (struct nlist_64 *)(linkedit_base + symtab_cmd->symoff);
-      for(uint i = 0; i < symtab_cmd->nsyms; i++, symtab++) {
-        uint32_t strtab_offset = symtab->n_un.n_strx;
-        char *symbol_name = strtab + strtab_offset;
-        if(strcmp(symbol_name, "_vcpus") == 0) {
-          void *vcpus = (void *) (symtab->n_value + slide);
-          void *_cpu;
-          if (@available(macOS 13.5.1, *)) {
-            t_vcpus_v1351 _vcpus = (t_vcpus_v1351) vcpus;
-            _cpu = _vcpus + vcpu;
-          } else {
-            t_vcpus _vcpus = (t_vcpus) vcpus;
-            _cpu = _vcpus + vcpu;
-          }
-          t_vcpus cpu = (t_vcpus) _cpu;
-          if(cpu->context == _hv_vcpu_get_context(vcpu)) {
-            return cpu;
-          } else {
-            // Check _hv_vcpu_get_context in IDA
-            fprintf(stderr, "Verify _vcpus failed: vcpus=%p, sizeof(struct vcpus)=%lu, vcpu=%llu\n", vcpus, sizeof(struct vcpus), vcpu);
-            abort();
-          }
+static void *find_vcpus() {
+    intptr_t slide = 0;
+    const mach_header *header = findHypervisorHeader(&slide);
+    if(header) {
+        segment_command_64 *cur_seg_cmd;
+        const segment_command_64 *linkedit_segment = nullptr;
+        symtab_command* symtab_cmd = nullptr;
+        uintptr_t cur = reinterpret_cast<uintptr_t>(header) + sizeof(struct mach_header_64);
+        for (uint i = 0; i < header->ncmds; i++, cur += cur_seg_cmd->cmdsize) {
+            cur_seg_cmd = reinterpret_cast<segment_command_64 *>(cur);
+            if (cur_seg_cmd->cmd == LC_SEGMENT_64) {
+                if (strcmp(cur_seg_cmd->segname, SEG_LINKEDIT) == 0) {
+                    linkedit_segment = cur_seg_cmd;
+                }
+            } else if (cur_seg_cmd->cmd == LC_SYMTAB) {
+                symtab_cmd = reinterpret_cast<symtab_command *>(cur_seg_cmd);
+            }
         }
-      }
+        if(symtab_cmd && linkedit_segment) {
+            const uintptr_t linkedit_base = static_cast<uintptr_t>(slide) + linkedit_segment->vmaddr - linkedit_segment->fileoff;
+            auto strtab = reinterpret_cast<char *>(linkedit_base + symtab_cmd->stroff);
+
+            auto *symtab = reinterpret_cast<struct nlist_64 *>(linkedit_base + symtab_cmd->symoff);
+            for(uint i = 0; i < symtab_cmd->nsyms; i++, symtab++) {
+                const uint32_t strtab_offset = symtab->n_un.n_strx;
+                if(const char *symbol_name = strtab + strtab_offset; strcmp(symbol_name, "_vcpus") == 0) {
+                    void *vcpus = (void *) (symtab->n_value + slide);
+                    return vcpus;
+                }
+            }
+        }
     }
-  }
-  return NULL;
+    return nullptr;
+}
+
+static void *lookupVcpu(hv_vcpu_t vcpu) {
+    void *vcpus = find_vcpus();
+    if(!vcpus) {
+        fprintf(stderr, "Find _vcpus failed: sizeof(struct vcpus)=%lu, vcpu=%llu\n", sizeof(struct vcpus), vcpu);
+        abort();
+        return nullptr;
+    }
+    void *_cpu;
+    const char *os = nullptr;
+    if (@available(macOS 15.0.0, *)) {
+        const auto hv_vcpu = static_cast<void **>(vcpus) + vcpu;
+        const auto vcpu1500 = static_cast<t_vcpus_v1500>(*hv_vcpu);
+        _cpu = static_cast<void*>(&vcpu1500->context);
+        os = "15.0.0";
+    } else if (@available(macOS 13.5.1, *)) {
+        auto _vcpus = static_cast<t_vcpus_v1351>(vcpus);
+        _cpu = _vcpus + vcpu;
+        os = "13.5.1";
+    } else {
+        auto _vcpus = static_cast<t_vcpus>(vcpus);
+        _cpu = _vcpus + vcpu;
+        os = "others";
+    }
+    if(const auto cpu = static_cast<t_vcpus>(_cpu); cpu->context == _hv_vcpu_get_context(vcpu)) {
+        return cpu;
+    }
+    // Check _hv_vcpu_get_context in IDA
+    fprintf(stderr, "Verify _vcpus failed: vcpus=%p, vcpu=%llu, os=%s\n", vcpus, vcpu, os);
+    abort();
+    return nullptr;
 }

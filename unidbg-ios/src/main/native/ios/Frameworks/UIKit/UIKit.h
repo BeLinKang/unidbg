@@ -338,6 +338,10 @@ typedef enum UIUserInterfaceIdiom : NSInteger {
 - (void) setUnderlyingQueue: (dispatch_queue_t) queue;
 @end
 
+@interface NSOperation (Foundation)
+- (void) setQualityOfService: (NSQualityOfService) qualityOfService;
+@end
+
 @interface NSDateFormatter (Foundation)
 - (void)setLocalizedDateFormatFromTemplate:(NSString *)dateFormatTemplate;
 @end
@@ -428,4 +432,11 @@ BOOL UIAccessibilityDarkerSystemColorsEnabled();
 - (unsigned long long)unsignedLongLongValue;
 - (unsigned long long)unsignedLongValue;
 - (unsigned short)unsignedShortValue;
+@end
+
+typedef NSInteger LAPolicy;
+
+@interface LAContext : NSObject
+- (BOOL) canEvaluatePolicy:(LAPolicy) policy
+                     error:(NSError * *) error;
 @end

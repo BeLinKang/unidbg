@@ -1,6 +1,5 @@
 package com.github.unidbg.ios;
 
-import com.github.unidbg.AbstractEmulator;
 import com.github.unidbg.Emulator;
 import com.github.unidbg.Module;
 import com.github.unidbg.arm.backend.DynarmicFactory;
@@ -31,7 +30,6 @@ import java.io.File;
 public class FrameworkLoaderTest implements EmulatorConfigurator, DispatchAsyncCallback, MsgSendCallback {
 
     public static void main(String[] args) throws Exception {
-        Logger.getLogger(AbstractEmulator.class).setLevel(Level.INFO);
         FrameworkLoaderTest test = new FrameworkLoaderTest();
         test.testLoader();
     }
@@ -98,20 +96,20 @@ public class FrameworkLoaderTest implements EmulatorConfigurator, DispatchAsyncC
     }
 
     @Override
-    public boolean canDispatch(Emulator<?> emulator, Pointer dq, Pointer fun, boolean is_barrier_async) {
+    public Result canDispatch(Emulator<?> emulator, Pointer dq, Pointer fun, boolean is_barrier_async) {
         long address = UnidbgPointer.nativeValue(fun);
         Module module = emulator.getMemory().findModuleByAddress(address);
         if ("Approov".equals(module.name)) {
             long offset = address - module.base;
             if (offset == 0x4c0e0) {
-                return true;
+                return Result.thread_run;
             }
             if (offset == 0xd2d4) {
-                return true;
+                return Result.thread_run;
             }
         }
         System.out.println("canDispatch dq=" + dq + ", fun=" + fun + ", is_barrier_async=" + is_barrier_async);
-        return false;
+        return Result.skip;
     }
 
 }
